@@ -1,4 +1,20 @@
 package com.example.ecommerce.service;
 
-public class OrderService {
+import com.example.ecommerce.dto.OrderResponse;
+
+import java.util.List;
+
+public interface OrderService {
+
+    OrderResponse checkoutFromCart();
+
+    List<OrderResponse> getMyOrders();
+
+    OrderResponse getMyOrderById(Long orderId);
+
+    List<OrderResponse> getAllOrdersForAdmin();
+
+    OrderResponse getOrderDetailForAdmin(Long orderId);
+
+    void updateOrderStatus(Long orderId, String status);
 }
