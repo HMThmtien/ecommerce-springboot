@@ -3,11 +3,13 @@ package com.example.ecommerce.controller;
 import com.example.ecommerce.dto.ProductDto;
 import com.example.ecommerce.payload.ApiResponse;
 import com.example.ecommerce.payload.PagedResponse;
+import com.example.ecommerce.service.FileStorageService;
 import com.example.ecommerce.service.ProductService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/api/products")
@@ -15,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 public class ProductController {
 
     private final ProductService productService;
+    private final FileStorageService fileStorageService;
 
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
@@ -48,5 +51,14 @@ public class ProductController {
             @RequestParam(defaultValue = "id,desc") String sort) {
         return ApiResponse.ok("Lấy danh sách sản phẩm thành công",
                 productService.getAll(page, size, sort));
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping("/{id}/image")
+    public ApiResponse<ProductDto> uploadImage(@PathVariable Long id,
+                                               @RequestParam("file") MultipartFile file) {
+        String url = fileStorageService.storeFile(file);
+        ProductDto updated = productService.updateImage(id, url);
+        return ApiResponse.ok("Cập nhật ảnh sản phẩm thành công", updated);
     }
 }

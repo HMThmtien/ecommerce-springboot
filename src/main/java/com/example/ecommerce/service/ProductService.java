@@ -10,4 +10,6 @@ public interface ProductService {
     void delete(Long id);
     ProductDto getById(Long id);
     PagedResponse<ProductDto> getAll(int page, int size, String sort);
+    ProductDto updateImage(Long productId, String imageUrl);
+
 }
