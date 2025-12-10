@@ -21,3 +21,6 @@ server:
 jwt:
   secret: change-this-secret-key-to-something-long-123456
   expiration-ms: 86400000   # 1 ngày
+
+file:
+  upload-dir: uploads
