@@ -1,6 +1,7 @@
 package com.example.ecommerce.service.impl;
 
 import com.example.ecommerce.dto.ProductDto;
+import com.example.ecommerce.dto.ProductFilterRequest;
 import com.example.ecommerce.entity.Category;
 import com.example.ecommerce.entity.Product;
 import com.example.ecommerce.exception.ResourceNotFoundException;
@@ -8,9 +9,12 @@ import com.example.ecommerce.payload.PagedResponse;
 import com.example.ecommerce.repository.CategoryRepository;
 import com.example.ecommerce.repository.ProductRepository;
 import com.example.ecommerce.service.ProductService;
+import com.example.ecommerce.spec.ProductSpecification;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -114,6 +118,47 @@ public class ProductServiceImpl implements ProductService {
                 .orElseThrow(() -> new ResourceNotFoundException("Product", "id", productId));
         product.setImageUrl(imageUrl);
         return mapToDto(productRepository.save(product));
+    }
+
+
+
+    @Override
+    public PagedResponse<ProductDto> searchProducts(ProductFilterRequest filter) {
+        String sortBy = filter.getSortBy() == null ? "id" : filter.getSortBy();
+        String sortDir = filter.getSortDir() == null ? "desc" : filter.getSortDir();
+
+        Sort sort = sortDir.equalsIgnoreCase("asc") ?
+                Sort.by(sortBy).ascending() :
+                Sort.by(sortBy).descending();
+
+        int page = Math.max(filter.getPage(), 0);
+        int size = filter.getSize() <= 0 ? 10 : filter.getSize();
+
+        Pageable pageable = PageRequest.of(page, size, sort);
+
+        var spec = ProductSpecification.filter(
+                filter.getKeyword(),
+                filter.getCategoryId(),
+                filter.getMinPrice(),
+                filter.getMaxPrice()
+        );
+
+        Page<Product> productPage = productRepository.findAll(spec, pageable);
+
+        List<ProductDto> content = productPage.getContent()
+                .stream()
+                .map(this::mapToDto)
+                .toList();
+
+        PagedResponse<ProductDto> response = new PagedResponse<>();
+        response.setContent(content);
+        response.setPage(productPage.getNumber());
+        response.setSize(productPage.getSize());
+        response.setTotalElements(productPage.getTotalElements());
+        response.setTotalPages(productPage.getTotalPages());
+        response.setLast(productPage.isLast());
+
+        return response;
     }
 
 }

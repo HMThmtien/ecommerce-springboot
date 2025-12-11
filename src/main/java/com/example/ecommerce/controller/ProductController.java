@@ -1,6 +1,7 @@
 package com.example.ecommerce.controller;
 
 import com.example.ecommerce.dto.ProductDto;
+import com.example.ecommerce.dto.ProductFilterRequest;
 import com.example.ecommerce.payload.ApiResponse;
 import com.example.ecommerce.payload.PagedResponse;
 import com.example.ecommerce.service.FileStorageService;
@@ -10,6 +11,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.math.BigDecimal;
 
 @RestController
 @RequestMapping("/api/products")
@@ -60,5 +63,32 @@ public class ProductController {
         String url = fileStorageService.storeFile(file);
         ProductDto updated = productService.updateImage(id, url);
         return ApiResponse.ok("Cập nhật ảnh sản phẩm thành công", updated);
+    }
+
+
+
+    @GetMapping("/search")
+    public ApiResponse<PagedResponse<ProductDto>> searchProducts(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Long categoryId,
+            @RequestParam(required = false) BigDecimal minPrice,
+            @RequestParam(required = false) BigDecimal maxPrice,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "id") String sortBy,
+            @RequestParam(defaultValue = "desc") String sortDir
+    ) {
+        ProductFilterRequest filter = new ProductFilterRequest();
+        filter.setKeyword(keyword);
+        filter.setCategoryId(categoryId);
+        filter.setMinPrice(minPrice);
+        filter.setMaxPrice(maxPrice);
+        filter.setPage(page);
+        filter.setSize(size);
+        filter.setSortBy(sortBy);
+        filter.setSortDir(sortDir);
+
+        PagedResponse<ProductDto> result = productService.searchProducts(filter);
+        return ApiResponse.ok("Tìm kiếm sản phẩm thành công", result);
     }
 }

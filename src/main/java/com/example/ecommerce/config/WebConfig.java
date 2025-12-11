@@ -10,10 +10,11 @@ public class WebConfig implements WebMvcConfigurer {
     @Value("${file.upload-dir}")
     private String uploadDir;
 
+    // Map /uploads/** -> thư mục vật lý (nơi bạn lưu file)
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        // Map URL /uploads/** -> thư mục uploads trên ổ đĩa
         registry.addResourceHandler("/uploads/**")
                 .addResourceLocations("file:" + uploadDir + "/");
     }
+
 }
