@@ -27,6 +27,7 @@ public class OrderServiceImpl implements OrderService {
     private final CartItemRepository cartItemRepository;
     private final UserRepository userRepository;
     private final ProductRepository productRepository;
+    private final AddressRepository addressRepository;
 
     // Lấy user hiện tại từ SecurityContext
     private User getCurrentUser() {
@@ -60,12 +61,24 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     @Transactional
-    public OrderResponse checkoutFromCart() {
+    public OrderResponse checkoutFromCart(Long addressId) {
         User user = getCurrentUser();
         List<CartItem> cartItems = cartItemRepository.findByUser(user);
 
         if (cartItems.isEmpty()) {
             throw new BadRequestException("Giỏ hàng trống, không thể checkout");
+        }
+
+        Address address;
+        if (addressId != null) {
+            address = addressRepository.findById(addressId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Address", "id", addressId));
+            if (!address.getUser().getId().equals(user.getId())) {
+                throw new BadRequestException("Bạn không thể sử dụng địa chỉ của người khác");
+            }
+        } else {
+            address = addressRepository.findByUserAndDefaultAddressTrue(user)
+                    .orElseThrow(() -> new BadRequestException("Bạn chưa thiết lập địa chỉ mặc định"));
         }
 
         // Kiểm tra tồn kho & tính tổng tiền
@@ -81,13 +94,27 @@ public class OrderServiceImpl implements OrderService {
             total = total.add(line);
         }
 
+        String fullAddress = address.getStreet() + ", " +
+                address.getWard() + ", " +
+                address.getDistrict() + ", " +
+                address.getProvince();
+
         // Tạo Order
         Order order = Order.builder()
                 .user(user)
                 .totalAmount(total)
-                .status("PENDING")  // hoặc "CREATED" - tuỳ bạn
+                // trạng thái xử lý đơn hàng ban đầu
+                .status("NEW")
+                // trạng thái thanh toán ban đầu
+                .paymentStatus("PENDING")
+                // mặc định COD (thanh toán khi nhận hàng), sẽ cho đổi sau
+                .paymentMethod("COD")
                 .createdAt(Instant.now())
+                .shippingName(address.getFullName())
+                .shippingPhone(address.getPhone())
+                .shippingAddress(fullAddress)
                 .build();
+
 
         order = orderRepository.save(order);
 
@@ -117,6 +144,8 @@ public class OrderServiceImpl implements OrderService {
 
         return mapToResponse(order);
     }
+
+
 
     @Override
     public List<OrderResponse> getMyOrders() {

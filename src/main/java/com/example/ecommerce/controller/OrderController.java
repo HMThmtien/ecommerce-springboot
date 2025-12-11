@@ -17,10 +17,11 @@ public class OrderController {
 
     // USER: checkout từ cart
     @PostMapping("/api/orders/checkout")
-    public ApiResponse<OrderResponse> checkout() {
-        OrderResponse res = orderService.checkoutFromCart();
+    public ApiResponse<OrderResponse> checkout(@RequestParam(required = false) Long addressId) {
+        OrderResponse res = orderService.checkoutFromCart(addressId);
         return ApiResponse.ok("Tạo đơn hàng thành công", res);
     }
+
 
     // USER: xem danh sách đơn hàng của chính mình
     @GetMapping("/api/orders/my")

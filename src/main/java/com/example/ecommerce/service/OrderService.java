@@ -6,7 +6,7 @@ import java.util.List;
 
 public interface OrderService {
 
-    OrderResponse checkoutFromCart();
+    OrderResponse checkoutFromCart(Long addressId);
 
     List<OrderResponse> getMyOrders();
 
