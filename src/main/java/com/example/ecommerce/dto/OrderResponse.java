@@ -13,6 +13,9 @@ public class OrderResponse {
     private BigDecimal totalAmount;
     private String status;
     private Instant createdAt;
+    private String paymentStatus;
+    private String paymentMethod;
+    private Instant paidAt;
 
     private List<OrderItemResponse> items;
 }

@@ -2,6 +2,7 @@ package com.example.ecommerce.service.impl;
 
 import com.example.ecommerce.dto.OrderItemResponse;
 import com.example.ecommerce.dto.OrderResponse;
+import com.example.ecommerce.dto.PaymentRequest;
 import com.example.ecommerce.entity.*;
 import com.example.ecommerce.exception.BadRequestException;
 import com.example.ecommerce.exception.ResourceNotFoundException;
@@ -43,6 +44,9 @@ public class OrderServiceImpl implements OrderService {
         res.setStatus(order.getStatus());
         res.setTotalAmount(order.getTotalAmount());
         res.setCreatedAt(order.getCreatedAt());
+        res.setPaymentStatus(order.getPaymentStatus());
+        res.setPaymentMethod(order.getPaymentMethod());
+        res.setPaidAt(order.getPaidAt());
 
         List<OrderItemResponse> itemResponses = new ArrayList<>();
         if (order.getItems() != null) {
@@ -190,4 +194,41 @@ public class OrderServiceImpl implements OrderService {
         order.setStatus(status);
         orderRepository.save(order);
     }
+
+
+    @Override
+    @Transactional
+    public OrderResponse payOrder(Long orderId, PaymentRequest request) {
+        User user = getCurrentUser();
+
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order", "id", orderId));
+
+        if (!order.getUser().getId().equals(user.getId())) {
+            throw new BadRequestException("Không thể thanh toán đơn hàng của người khác");
+        }
+
+        String paymentStatus = order.getPaymentStatus();
+        // Nếu đã có trạng thái và không phải PENDING -> chặn
+        if (paymentStatus != null && !"PENDING".equalsIgnoreCase(paymentStatus)) {
+            throw new BadRequestException("Đơn hàng này không ở trạng thái chờ thanh toán");
+        }
+
+        // Giả lập thanh toán thành công (mock)
+        String method = request.getMethod().toUpperCase();
+        if (!method.matches("COD|BANK_TRANSFER|VNPAY|MOMO")) {
+            throw new BadRequestException("Phương thức thanh toán không hợp lệ");
+        }
+
+        order.setPaymentMethod(method);
+        order.setPaymentStatus("PAID");
+        order.setPaidAt(Instant.now());
+        order.setStatus("PROCESSING");
+
+        orderRepository.save(order);
+
+        return mapToResponse(order);
+    }
+
+
 }
