@@ -7,6 +7,7 @@ import com.example.ecommerce.entity.*;
 import com.example.ecommerce.exception.BadRequestException;
 import com.example.ecommerce.exception.ResourceNotFoundException;
 import com.example.ecommerce.repository.*;
+import com.example.ecommerce.service.InventoryService;
 import com.example.ecommerce.service.OrderService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
@@ -29,6 +30,7 @@ public class OrderServiceImpl implements OrderService {
     private final UserRepository userRepository;
     private final ProductRepository productRepository;
     private final AddressRepository addressRepository;
+    private final InventoryService inventoryService;
 
     // Lấy user hiện tại từ SecurityContext
     private User getCurrentUser() {
@@ -73,6 +75,7 @@ public class OrderServiceImpl implements OrderService {
             throw new BadRequestException("Giỏ hàng trống, không thể checkout");
         }
 
+        // 1. Lấy địa chỉ giao hàng
         Address address;
         if (addressId != null) {
             address = addressRepository.findById(addressId)
@@ -85,7 +88,7 @@ public class OrderServiceImpl implements OrderService {
                     .orElseThrow(() -> new BadRequestException("Bạn chưa thiết lập địa chỉ mặc định"));
         }
 
-        // Kiểm tra tồn kho & tính tổng tiền
+        // 2. Kiểm tra tồn kho & tính tổng tiền (KHÔNG trừ stock ở đây)
         BigDecimal total = BigDecimal.ZERO;
         for (CartItem ci : cartItems) {
             Product p = ci.getProduct();
@@ -98,32 +101,30 @@ public class OrderServiceImpl implements OrderService {
             total = total.add(line);
         }
 
+        // 3. Ghép địa chỉ giao hàng
         String fullAddress = address.getStreet() + ", " +
                 address.getWard() + ", " +
                 address.getDistrict() + ", " +
                 address.getProvince();
 
-        // Tạo Order
+        // 4. Tạo Order
         Order order = Order.builder()
                 .user(user)
                 .totalAmount(total)
-                // trạng thái xử lý đơn hàng ban đầu
-                .status("NEW")
-                // trạng thái thanh toán ban đầu
-                .paymentStatus("PENDING")
-                // mặc định COD (thanh toán khi nhận hàng), sẽ cho đổi sau
-                .paymentMethod("COD")
+                .status("NEW")            // trạng thái xử lý đơn
+                .paymentStatus("PENDING") // trạng thái thanh toán
+                .paymentMethod("COD")     // mặc định
                 .createdAt(Instant.now())
                 .shippingName(address.getFullName())
                 .shippingPhone(address.getPhone())
                 .shippingAddress(fullAddress)
                 .build();
 
-
         order = orderRepository.save(order);
 
-        // Tạo OrderItems + trừ tồn kho
+        // 5. Tạo OrderItems + trừ tồn kho + ghi log inventory
         List<OrderItem> orderItems = new ArrayList<>();
+
         for (CartItem ci : cartItems) {
             Product p = ci.getProduct();
 
@@ -131,23 +132,28 @@ public class OrderServiceImpl implements OrderService {
             p.setStock(p.getStock() - ci.getQuantity());
             productRepository.save(p);
 
+            // ghi log tồn kho: bán ra
+            inventoryService.recordSale(p, ci.getQuantity());
+
             OrderItem oi = OrderItem.builder()
                     .order(order)
                     .product(p)
                     .quantity(ci.getQuantity())
                     .price(p.getPrice())
                     .build();
+
             orderItems.add(oi);
         }
 
         orderItemRepository.saveAll(orderItems);
         order.setItems(orderItems);
 
-        // Xóa giỏ hàng sau khi checkout
+        // 6. Xóa giỏ hàng sau khi checkout
         cartItemRepository.deleteByUser(user);
 
         return mapToResponse(order);
     }
+
 
 
 
