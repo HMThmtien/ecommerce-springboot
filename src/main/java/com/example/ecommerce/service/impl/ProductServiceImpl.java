@@ -11,6 +11,8 @@ import com.example.ecommerce.repository.ProductRepository;
 import com.example.ecommerce.service.ProductService;
 import com.example.ecommerce.spec.ProductSpecification;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 
@@ -55,6 +57,7 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @CacheEvict(value = "products", allEntries = true)
     public ProductDto create(ProductDto dto) {
         Product product = mapToEntity(dto);
         Product saved = productRepository.save(product);
@@ -62,6 +65,7 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @CacheEvict(value = "product", key = "#id")
     public ProductDto update(Long id, ProductDto dto) {
         Product existing = productRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product", "id", id));
@@ -79,6 +83,7 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @CacheEvict(value = "product", key = "#id")
     public void delete(Long id) {
         if (!productRepository.existsById(id)) {
             throw new ResourceNotFoundException("Product", "id", id);
@@ -87,6 +92,7 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @Cacheable(value = "product", key = "#id")
     public ProductDto getById(Long id) {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product", "id", id));
@@ -123,6 +129,19 @@ public class ProductServiceImpl implements ProductService {
 
 
     @Override
+    @Cacheable(
+            value = "products",
+            key = "T(org.springframework.cache.interceptor.SimpleKey).of(" +
+                    "#filter.keyword, " +
+                    "#filter.categoryId, " +
+                    "#filter.minPrice, " +
+                    "#filter.maxPrice, " +
+                    "#filter.sortBy, " +
+                    "#filter.sortDir, " +
+                    "#filter.page, " +
+                    "#filter.size" +
+                    ")"
+    )
     public PagedResponse<ProductDto> searchProducts(ProductFilterRequest filter) {
         String sortBy = filter.getSortBy() == null ? "id" : filter.getSortBy();
         String sortDir = filter.getSortDir() == null ? "desc" : filter.getSortDir();
@@ -160,5 +179,6 @@ public class ProductServiceImpl implements ProductService {
 
         return response;
     }
+
 
 }
