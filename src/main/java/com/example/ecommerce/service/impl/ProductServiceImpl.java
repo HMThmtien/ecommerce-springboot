@@ -17,6 +17,7 @@ import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -24,6 +25,38 @@ public class ProductServiceImpl implements ProductService {
 
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
+    private static final Set<String> ALLOWED_SORT_FIELDS =
+            Set.of("id", "name", "price", "stock");
+
+    private Pageable buildPageable(
+            Integer page,
+            Integer size,
+            String sort,
+            String dir
+    ) {
+        int pageNumber = (page == null || page < 0) ? 0 : page;
+        int pageSize = (size == null || size <= 0) ? 10 : size;
+
+        String sortField = ALLOWED_SORT_FIELDS.contains(sort) ? sort : "id";
+        Sort.Direction direction =
+                "asc".equalsIgnoreCase(dir) ? Sort.Direction.ASC : Sort.Direction.DESC;
+
+        return PageRequest.of(pageNumber, pageSize, Sort.by(direction, sortField));
+    }
+
+    private PagedResponse<ProductDto> mapToPagedResponse(Page<Product> page) {
+        return new PagedResponse<>(
+                page.getContent().stream().map(this::mapToDto).toList(),
+                page.getNumber(),
+                page.getSize(),
+                page.getTotalElements(),
+                page.getTotalPages(),
+                page.isLast()
+        );
+    }
+
+
+
 
     private ProductDto mapToDto(Product p) {
         ProductDto dto = new ProductDto();
@@ -57,7 +90,7 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    @CacheEvict(value = "products", allEntries = true)
+    //@CacheEvict(value = "products", allEntries = true)
     public ProductDto create(ProductDto dto) {
         Product product = mapToEntity(dto);
         Product saved = productRepository.save(product);
@@ -65,7 +98,7 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    @CacheEvict(value = "product", key = "#id")
+    //@CacheEvict(value = "products", key = "#id")
     public ProductDto update(Long id, ProductDto dto) {
         Product existing = productRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product", "id", id));
@@ -83,7 +116,7 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    @CacheEvict(value = "product", key = "#id")
+    //@CacheEvict(value = "products", key = "#id")
     public void delete(Long id) {
         if (!productRepository.existsById(id)) {
             throw new ResourceNotFoundException("Product", "id", id);
@@ -92,7 +125,7 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    @Cacheable(value = "product", key = "#id")
+    //@Cacheable(value = "product_by_id", key = "#id")
     public ProductDto getById(Long id) {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product", "id", id));
@@ -100,23 +133,19 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    public PagedResponse<ProductDto> getAll(int page, int size, String sort) {
-        String[] sortParams = sort.split(",");
-        String sortField = sortParams[0];
-        Sort.Direction direction = sortParams.length > 1 && sortParams[1].equalsIgnoreCase("desc")
-                ? Sort.Direction.DESC : Sort.Direction.ASC;
+    public PagedResponse<ProductDto> getAllProducts(
+            Integer page,
+            Integer size,
+            String sort,
+            String dir
+    ) {
+        Pageable pageable = buildPageable(page, size, sort, dir);
 
-        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortField));
-        Page<Product> productPage = productRepository.findAll(pageable);
+        Page<Product> productPage = productRepository.findAllProducts(pageable);
 
-        PagedResponse<ProductDto> response = new PagedResponse<>();
-        response.setContent(productPage.map(this::mapToDto).getContent());
-        response.setPage(page);
-        response.setSize(size);
-        response.setTotalElements(productPage.getTotalElements());
-        response.setTotalPages(productPage.getTotalPages());
-        return response;
+        return mapToPagedResponse(productPage);
     }
+
 
     @Override
     public ProductDto updateImage(Long productId, String imageUrl) {
@@ -129,56 +158,26 @@ public class ProductServiceImpl implements ProductService {
 
 
     @Override
-    @Cacheable(
-            value = "products",
-            key = "T(org.springframework.cache.interceptor.SimpleKey).of(" +
-                    "#filter.keyword, " +
-                    "#filter.categoryId, " +
-                    "#filter.minPrice, " +
-                    "#filter.maxPrice, " +
-                    "#filter.sortBy, " +
-                    "#filter.sortDir, " +
-                    "#filter.page, " +
-                    "#filter.size" +
-                    ")"
-    )
     public PagedResponse<ProductDto> searchProducts(ProductFilterRequest filter) {
-        String sortBy = filter.getSortBy() == null ? "id" : filter.getSortBy();
-        String sortDir = filter.getSortDir() == null ? "desc" : filter.getSortDir();
 
-        Sort sort = sortDir.equalsIgnoreCase("asc") ?
-                Sort.by(sortBy).ascending() :
-                Sort.by(sortBy).descending();
+        Pageable pageable = buildPageable(
+                filter.getPage(),
+                filter.getSize(),
+                filter.getSortBy(),
+                filter.getSortDir()
+        );
 
-        int page = Math.max(filter.getPage(), 0);
-        int size = filter.getSize() <= 0 ? 10 : filter.getSize();
-
-        Pageable pageable = PageRequest.of(page, size, sort);
-
-        var spec = ProductSpecification.filter(
+        Page<Product> page = productRepository.searchProducts(
                 filter.getKeyword(),
                 filter.getCategoryId(),
                 filter.getMinPrice(),
-                filter.getMaxPrice()
+                filter.getMaxPrice(),
+                pageable
         );
 
-        Page<Product> productPage = productRepository.findAll(spec, pageable);
-
-        List<ProductDto> content = productPage.getContent()
-                .stream()
-                .map(this::mapToDto)
-                .toList();
-
-        PagedResponse<ProductDto> response = new PagedResponse<>();
-        response.setContent(content);
-        response.setPage(productPage.getNumber());
-        response.setSize(productPage.getSize());
-        response.setTotalElements(productPage.getTotalElements());
-        response.setTotalPages(productPage.getTotalPages());
-        response.setLast(productPage.isLast());
-
-        return response;
+        return mapToPagedResponse(page);
     }
+
 
 
 }

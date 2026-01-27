@@ -14,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.List;
@@ -28,10 +29,16 @@ public class WishlistServiceImpl implements WishlistService {
 
     private User getCurrentUser() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated() || auth.getName() == null) {
+            throw new BadRequestException("Bạn chưa đăng nhập hoặc token không hợp lệ");
+            // tốt nhất: throw UnauthorizedException để ra 401
+        }
+
         String email = auth.getName();
         return userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "email", email));
     }
+
 
     @Override
     public void addToWishlist(Long productId) {
@@ -52,13 +59,15 @@ public class WishlistServiceImpl implements WishlistService {
         wishlistRepository.save(w);
     }
 
+    @Transactional
     @Override
     public void removeFromWishlist(Long productId) {
         User user = getCurrentUser();
-        Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new BadRequestException("Sản phẩm không tồn tại"));
 
-        wishlistRepository.deleteByUserAndProduct(user, product);
+        Wishlist w = wishlistRepository.findByUserIdAndProductId(user.getId(), productId)
+                .orElseThrow(() -> new BadRequestException("Sản phẩm không nằm trong wishlist"));
+
+        wishlistRepository.delete(w);
     }
 
     @Override
@@ -81,10 +90,11 @@ public class WishlistServiceImpl implements WishlistService {
                 .toList();
     }
 
+    @Transactional
     @Override
     public void clearMyWishlist() {
         User user = getCurrentUser();
-        wishlistRepository.deleteByUser(user);
+        wishlistRepository.deleteByUserId(user.getId());
     }
 
     @Override

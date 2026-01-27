@@ -7,6 +7,7 @@ import com.example.ecommerce.payload.ApiResponse;
 import com.example.ecommerce.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -27,4 +28,12 @@ public class AuthController {
         AuthResponse response = authService.login(request);
         return ApiResponse.ok("Đăng nhập thành công", response);
     }
+
+    private final StringRedisTemplate redis;
+
+//    @GetMapping("/debug/redis-ping")
+//    public String ping() {
+//        redis.opsForValue().set("test:ping", "PONG");
+//        return redis.opsForValue().get("test:ping");
+//    }
 }

@@ -49,12 +49,17 @@ public class ProductController {
 
     @GetMapping
     public ApiResponse<PagedResponse<ProductDto>> getAll(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "12") int size,
-            @RequestParam(defaultValue = "id,desc") String sort) {
-        return ApiResponse.ok("Lấy danh sách sản phẩm thành công",
-                productService.getAll(page, size, sort));
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size,
+            @RequestParam(defaultValue = "id") String sort,
+            @RequestParam(defaultValue = "desc") String dir
+    ) {
+        return ApiResponse.ok(
+                "Lấy danh sách sản phẩm thành công",
+                productService.getAllProducts(page, size, sort, dir)
+        );
     }
+
 
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/{id}/image")
@@ -68,27 +73,13 @@ public class ProductController {
 
 
     @GetMapping("/search")
-    public ApiResponse<PagedResponse<ProductDto>> searchProducts(
-            @RequestParam(required = false) String keyword,
-            @RequestParam(required = false) Long categoryId,
-            @RequestParam(required = false) BigDecimal minPrice,
-            @RequestParam(required = false) BigDecimal maxPrice,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "id") String sortBy,
-            @RequestParam(defaultValue = "desc") String sortDir
-    ) {
-        ProductFilterRequest filter = new ProductFilterRequest();
-        filter.setKeyword(keyword);
-        filter.setCategoryId(categoryId);
-        filter.setMinPrice(minPrice);
-        filter.setMaxPrice(maxPrice);
-        filter.setPage(page);
-        filter.setSize(size);
-        filter.setSortBy(sortBy);
-        filter.setSortDir(sortDir);
-
-        PagedResponse<ProductDto> result = productService.searchProducts(filter);
-        return ApiResponse.ok("Tìm kiếm sản phẩm thành công", result);
+    public ApiResponse<PagedResponse<ProductDto>> search(@ModelAttribute ProductFilterRequest filter) {
+        return ApiResponse.ok(
+                "Tìm kiếm sản phẩm thành công",
+                productService.searchProducts(filter)
+        );
     }
+
+
+
 }
