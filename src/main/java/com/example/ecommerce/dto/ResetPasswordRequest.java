@@ -5,10 +5,7 @@ import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 @Data
-public class ChangePasswordRequest {
-    @NotBlank
-    private String oldPassword;
-
+public class ResetPasswordRequest {
     @NotBlank
     @Size(min = 6, message = "Mật khẩu mới phải có ít nhất 6 ký tự")
     private String newPassword;

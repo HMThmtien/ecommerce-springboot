@@ -85,9 +85,7 @@ public class InventoryServiceImpl implements InventoryService {
     public List<ProductDto> getLowStockProducts(Integer threshold) {
         int th = (threshold == null || threshold <= 0) ? 10 : threshold;
 
-        List<Product> products = productRepository.findAll().stream()
-                .filter(p -> p.getStock() != null && p.getStock() <= th)
-                .toList();
+        List<Product> products = productRepository.findByStockLessThanEqual(th);
 
         return products.stream()
                 .map(this::mapToDto)

@@ -67,8 +67,9 @@ public class UserController {
 
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/{id}/reset-password")
-    public ApiResponse<Void> adminResetPassword(@PathVariable Long id, @RequestParam String newPassword) {
-        userService.adminResetPassword(id, newPassword);
+    public ApiResponse<Void> adminResetPassword(@PathVariable Long id,
+                                                @Valid @RequestBody ResetPasswordRequest req) {
+        userService.adminResetPassword(id, req.getNewPassword());
         return ApiResponse.ok("Reset mật khẩu thành công", null);
     }
 }

@@ -49,6 +49,9 @@ public class OrderServiceImpl implements OrderService {
         res.setPaymentStatus(order.getPaymentStatus());
         res.setPaymentMethod(order.getPaymentMethod());
         res.setPaidAt(order.getPaidAt());
+        res.setShippingName(order.getShippingName());
+        res.setShippingPhone(order.getShippingPhone());
+        res.setShippingAddress(order.getShippingAddress());
 
         List<OrderItemResponse> itemResponses = new ArrayList<>();
         if (order.getItems() != null) {

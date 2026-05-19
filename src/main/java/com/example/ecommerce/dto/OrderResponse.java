@@ -17,5 +17,10 @@ public class OrderResponse {
     private String paymentMethod;
     private Instant paidAt;
 
+    // Shipping info
+    private String shippingName;
+    private String shippingPhone;
+    private String shippingAddress;
+
     private List<OrderItemResponse> items;
 }

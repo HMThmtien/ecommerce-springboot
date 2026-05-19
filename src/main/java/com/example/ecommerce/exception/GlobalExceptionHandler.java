@@ -2,6 +2,9 @@ package com.example.ecommerce.exception;
 
 import com.example.ecommerce.payload.ApiResponse;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
 
@@ -31,10 +34,21 @@ public class GlobalExceptionHandler {
         return ApiResponse.fail("Validation lỗi: " + msg);
     }
 
+    @ExceptionHandler({AuthenticationException.class, BadCredentialsException.class})
+    @ResponseStatus(HttpStatus.UNAUTHORIZED)
+    public ApiResponse<Void> handleAuthentication(AuthenticationException ex) {
+        return ApiResponse.fail("Xác thực thất bại: email hoặc mật khẩu không đúng");
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    public ApiResponse<Void> handleAccessDenied(AccessDeniedException ex) {
+        return ApiResponse.fail("Bạn không có quyền truy cập tài nguyên này");
+    }
+
     @ExceptionHandler(Exception.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public ApiResponse<Void> handleOther(Exception ex) {
-        // có thể log ra
-        return ApiResponse.fail("Lỗi hệ thống");
+        return ApiResponse.fail("Lỗi hệ thống: " + ex.getMessage());
     }
 }

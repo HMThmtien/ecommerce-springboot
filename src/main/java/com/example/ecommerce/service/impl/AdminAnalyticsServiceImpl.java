@@ -32,8 +32,8 @@ public class AdminAnalyticsServiceImpl implements AdminAnalyticsService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         long totalOrders = orders.size();
-        long totalPaid = orders.stream().filter(o -> "PAID".equalsIgnoreCase(o.getStatus())).count();
-        long totalPending = orders.stream().filter(o -> "PENDING".equalsIgnoreCase(o.getStatus())).count();
+        long totalPaid = orders.stream().filter(o -> "PAID".equalsIgnoreCase(o.getPaymentStatus())).count();
+        long totalPending = orders.stream().filter(o -> "PENDING".equalsIgnoreCase(o.getPaymentStatus())).count();
 
         dto.setTotalRevenue(totalRevenue);
         dto.setTotalOrders(totalOrders);

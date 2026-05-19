@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpecificationExecutor<Product> {
     Page<Product> findByNameContainingIgnoreCase(String name, Pageable pageable);
@@ -16,6 +17,7 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
 
     boolean existsByNameIgnoreCase(String name);
 
+    List<Product> findByStockLessThanEqual(int threshold);
 
     @Query("SELECT p FROM Product p")
     Page<Product> findAllProducts(Pageable pageable);

@@ -33,8 +33,14 @@ public class FileStorageServiceImpl implements FileStorageService {
         }
 
         String original = StringUtils.cleanPath(file.getOriginalFilename());
-        String ext = "";
 
+        // Validate file type - only allow images
+        String contentType = file.getContentType();
+        if (contentType == null || !contentType.startsWith("image/")) {
+            throw new RuntimeException("Chỉ cho phép upload file ảnh (image/*)");
+        }
+
+        String ext = "";
         int dotIndex = original.lastIndexOf('.');
         if (dotIndex > 0) {
             ext = original.substring(dotIndex);

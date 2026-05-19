@@ -3,6 +3,7 @@ package com.example.ecommerce.service.impl;
 import com.example.ecommerce.dto.*;
 import com.example.ecommerce.entity.Role;
 import com.example.ecommerce.entity.User;
+import com.example.ecommerce.exception.BadRequestException;
 import com.example.ecommerce.exception.ResourceNotFoundException;
 import com.example.ecommerce.payload.PagedResponse;
 import com.example.ecommerce.repository.RoleRepository;
@@ -62,8 +63,7 @@ public class UserServiceImpl implements UserService {
         User u = getCurrentUserEntity();
 
         if (!passwordEncoder.matches(req.getOldPassword(), u.getPassword())) {
-            // bạn có thể dùng BadRequestException nếu có
-            throw new RuntimeException("Mật khẩu cũ không đúng");
+            throw new BadRequestException("Mật khẩu cũ không đúng");
         }
 
         u.setPassword(passwordEncoder.encode(req.getNewPassword()));
@@ -115,7 +115,7 @@ public class UserServiceImpl implements UserService {
 
         Set<Role> roles = req.getRoles().stream()
                 .map(name -> roleRepository.findByName(name)
-                        .orElseThrow(() -> new RuntimeException("Role not found: " + name)))
+                        .orElseThrow(() -> new ResourceNotFoundException("Role", "name", name)))
                 .collect(Collectors.toSet());
 
         u.setRoles(roles);
